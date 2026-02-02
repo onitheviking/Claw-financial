@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+
+const path = require("path");
+const { execSync, spawn } = require("child_process");
+
+const DIST = path.join(__dirname, "..", "dist");
+const TOOLS = path.join(DIST, "tools");
+
+const commands = {
+  dashboard: {
+    file: "open-dashboard.js",
+    desc: "Open the account management dashboard in your browser",
+  },
+  accounts: {
+    file: "get-accounts.js",
+    desc: "List connected bank accounts",
+  },
+  balances: {
+    file: "get-balances.js",
+    desc: "Fetch balances for an account   (usage: balances <account-id>)",
+  },
+  transactions: {
+    file: "get-transactions.js",
+    desc: "Fetch transactions for an account (usage: transactions <account-id>)",
+  },
+  remove: {
+    file: "remove-account.js",
+    desc: "Remove a connected account       (usage: remove <account-id>)",
+  },
+};
+
+function printUsage() {
+  console.log("claw-financial — Plaid integration for OpenClaw\n");
+  console.log("Commands:");
+  for (const [name, cmd] of Object.entries(commands)) {
+    console.log(`  ${name.padEnd(16)} ${cmd.desc}`);
+  }
+  console.log("\nFlags:");
+  console.log("  --json         Output as JSON (accounts, balances, transactions)");
+  console.log("  --summary      Show spending summary (transactions)");
+  console.log("\nSetup:");
+  console.log("  npm run setup  Configure credentials and encryption key");
+}
+
+const subcmd = process.argv[2];
+
+if (!subcmd || subcmd === "--help" || subcmd === "-h") {
+  printUsage();
+  process.exit(0);
+}
+
+const cmd = commands[subcmd];
+if (!cmd) {
+  console.error(`Unknown command: ${subcmd}\n`);
+  printUsage();
+  process.exit(1);
+}
+
+const toolPath = path.join(TOOLS, cmd.file);
+const args = process.argv.slice(3);
+
+try {
+  const child = spawn("node", [toolPath, ...args], {
+    stdio: "inherit",
+    env: process.env,
+  });
+  child.on("exit", (code) => process.exit(code || 0));
+} catch (err) {
+  console.error(`Failed to run ${subcmd}:`, err.message);
+  console.error("Have you run `npm run build` first?");
+  process.exit(1);
+}
