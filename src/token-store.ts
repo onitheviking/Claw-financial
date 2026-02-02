@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
@@ -19,9 +20,15 @@ let db: Database.Database | null = null;
 
 function getDb(): Database.Database {
   if (db) return db;
-  fs.mkdirSync(CONFIG.storage.dir, { recursive: true });
+  // Create storage directory with restricted permissions (owner-only)
+  fs.mkdirSync(CONFIG.storage.dir, { recursive: true, mode: 0o700 });
   const dbPath = path.join(CONFIG.storage.dir, CONFIG.storage.dbFile);
+  const dbExists = fs.existsSync(dbPath);
   db = new Database(dbPath);
+  // Set file permissions to owner-only read/write if newly created
+  if (!dbExists) {
+    fs.chmodSync(dbPath, 0o600);
+  }
   db.pragma("journal_mode = WAL");
   db.exec(`
     CREATE TABLE IF NOT EXISTS accounts (
@@ -47,7 +54,7 @@ export function storeAccount(
   accountIds: string[],
 ): StoredAccount {
   const database = getDb();
-  const id = `acct_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const id = `acct_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`;
   const accessTokenEnc = encrypt(accessToken, CONFIG.encryptionKey);
   database
     .prepare(
@@ -79,8 +86,14 @@ export function getAccessToken(accountId: string): string {
   const row = database
     .prepare("SELECT access_token_enc FROM accounts WHERE id = ?")
     .get(accountId) as { access_token_enc: string } | undefined;
-  if (!row) throw new Error(`Account ${accountId} not found`);
-  return decrypt(row.access_token_enc, CONFIG.encryptionKey);
+  if (!row) throw new Error("Account not found");
+  try {
+    return decrypt(row.access_token_enc, CONFIG.encryptionKey);
+  } catch {
+    throw new Error(
+      "Failed to decrypt access token. The encryption key may have changed — re-link the account.",
+    );
+  }
 }
 
 export function listAccounts(): StoredAccount[] {
