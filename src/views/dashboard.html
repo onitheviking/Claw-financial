@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claw Financial — Account Manager</title>
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="header-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M2 7a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7z"/>
+        <path d="M2 10h20"/>
+        <path d="M6 14h2"/>
+        <path d="M12 14h6"/>
+      </svg>
+      <h1>Claw Financial <span id="env-label"></span></h1>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" id="link-btn" onclick="window.clawFinancial.linkAccount()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Link Account
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="status-banner"></div>
+
+    <div class="section-header">
+      <h2>Connected Accounts</h2>
+      <span class="count" id="account-count">Loading...</span>
+    </div>
+
+    <div class="accounts-grid" id="accounts-grid">
+      <div class="empty-state">
+        <div class="spinner" style="margin: 0 auto 16px;"></div>
+        <p>Loading accounts...</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Set environment badge from server config
+    fetch('/api/status')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var label = document.getElementById('env-label');
+        label.textContent = data.environment;
+        label.className = 'env-badge ' + data.environment;
+        if (data.errors && data.errors.length > 0) {
+          var banner = document.getElementById('status-banner');
+          banner.className = 'status-banner error';
+          banner.innerHTML =
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+            '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>' +
+            '</svg>' +
+            '<span>Configuration issue: ' + data.errors.join('; ') + '</span>';
+        }
+      });
+  </script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

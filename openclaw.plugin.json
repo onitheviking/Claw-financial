@@ -1,0 +1,7 @@
+{
+  "name": "claw-financial",
+  "version": "1.0.0",
+  "description": "Connect bank accounts via Plaid and analyze financial transactions with your OpenClaw AI",
+  "skills": ["./"],
+  "homepage": "https://github.com/laura-flugga/Claw-financial"
+}
